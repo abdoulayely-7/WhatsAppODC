@@ -8,8 +8,8 @@ export const CONTACTS = [
         nonLus: 0,
         avatar: "MN",
         messages: [
-            { type: 'recu', texte: "Bonjour", heure: "22:13" },
-            { type: 'envoye', texte: "Salut Bob ", heure: "22:14" }
+            { type: 'recu', texte: "Bonjour pape", heure: "22:13" },
+            { type: 'envoye', texte: "Salut maman ", heure: "22:14" }
         ],
         archive: false
 
@@ -23,8 +23,8 @@ export const CONTACTS = [
         nonLus: 0,
         avatar: "KD",
         messages: [
-            { type: 'recu', texte: "Bonjour", heure: "22:13" },
-            { type: 'envoye', texte: "Salut Bob ", heure: "22:17" }
+            { type: 'recu', texte: "fils", heure: "22:13" },
+            { type: 'envoye', texte: "oui tete ", heure: "22:17" }
         ],
         archive: false
 

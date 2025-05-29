@@ -108,51 +108,269 @@ function activerContact(li, contact) {
         });
         li.classList.add("bg-gray-200");
         contactActif = contact;
-        afficherHeaderDiscussion(contact);
+        afficherDiscussion(contact);
     });
 }
 
+// function afficherHeaderDiscussion(contact) {
+//     const discussion = document.getElementById("discussion");
 
-// afficher discussion
-function afficherHeaderDiscussion(contact) {
+//     discussion.innerHTML = `
+//         <div id="discussion-header"  class="flex gap-3 border-b border-white  p-2">
+//             <div class="w-10 h-10 flex justify-center items-center bg-gray-400 rounded-full">
+//                 <p class="text-xm font-bold text-white">${contact.avatar}</p>
+//             </div>
+//             <div class="flex flex-col">
+//                 <span class="font-bold">${contact.prenom} ${contact.nom}</span>
+//                 <span class="text-sm text-green-600">en ligne</span>
+//             </div>
+//             <div class="flex gap-5 ml-auto">
+//                 <div class="w-10 h-10 flex items-center justify-center border-2 border-orange-500 rounded-full">
+//                     <i class="fa-solid fa-delete-left text-orange-500"></i>
+//                 </div>
+//                 <div class="w-10 h-10 flex items-center justify-center border-2 border-gray-500 rounded-full archive-btn" data-id="${contact.id}">
+//                     <i class="fas fa-archive text-gray-500 text-xl cursor-pointer"></i>
+//                 </div>
+//                 <div class="w-10 h-10 flex items-center justify-center border-2 border-black rounded-full">
+//                     <i class="fa-solid fa-square text-black"></i>
+//                 </div>
+//                 <div class="w-10 h-10 flex items-center justify-center border-2 border-red-500 rounded-full">
+//                     <i class="fa-solid fa-trash text-xl text-red-500"></i>
+//                 </div>
+//             </div>
+//         </div>
 
-    const header = document.getElementById("discussion-header");
-    header.innerHTML = `
-        
-        <div  class="w-10 h-10 flex justify-center items-center  bg-gray-400 rounded-full">
-            <p class="text-xm font-bold text-white">${contact.avatar}</p>
-        </div>
-        <div class="flex flex-col">
-            <span class="font-bold">${contact.prenom} ${contact.nom}</span>
-            <span class="text-sm text-green-600">en ligne</span>
-        </div>
-        <div class="flex gap-5 ml-auto">
-            <div class="w-10 h-10 flex items-center justify-center border-2 border-orange-500 rounded-full">
-                <i class="fa-solid fa-delete-left text-orange-500"></i>
+//         <div  id="discussion-messages" class=" flex flex-col flex-1 overflow-y-auto px-4 py-2 space-y-4">
+//             // <!-- Les messages seront injectés ici -->
+//         </div>
+
+//         <form id="form-envoi-message" class="w-full flex mb-1 bg-section p-4 gap-2">
+//             <input id="message-input" type="text"
+//                 class="w-full pl-5 pr-12 py-2 rounded-2xl bg-gray-200 text-black focus:outline-none" />
+//             <button type="submit" class="w-10 h-10 flex items-center justify-center rounded-full bg-green-500">
+//                 <i data-lucide="arrow-right" class="text-white cursor-pointer"></i>
+//             </button>
+//         </form>
+
+
+
+//     `;
+
+//     // Gérer le bouton d'archivage
+//     discussion.querySelector(".archive-btn").addEventListener("click", () => {
+//         showConfirmation(`Archiver ${contact.prenom} ${contact.nom} ?`, (confirmer) => {
+//             if (confirmer) {
+//                 contact.archive = true;
+//                 afficherContact();
+//                 discussion.innerHTML = `<p class="text-center w-full text-red-500 font-semibold">Contact archivé</p>`;
+//                 setTimeout(() => discussion.innerHTML = "", 1500);
+//             }
+//         });
+//     });
+
+//     createIcons({ icons });
+
+//     afficherMessages(contact);
+
+//     EnvoiMessage(contact)
+// }
+
+function genererHeader(contact) {
+    return `
+        <div id="discussion-header" class="flex gap-3 border-b border-white p-2">
+            <div class="w-10 h-10 flex justify-center items-center bg-gray-400 rounded-full">
+                <p class="text-xm font-bold text-white">${contact.avatar}</p>
             </div>
-            <div class="w-10 h-10 flex items-center justify-center border-2 border-gray-500 rounded-full archive-btn" data-id="${contact.id}">
-                <i class="fas fa-archive text-gray-500 text-xl cursor-pointer"></i>
+            <div class="flex flex-col">
+                <span class="font-bold">${contact.prenom} ${contact.nom}</span>
+                <span class="text-sm text-green-600">en ligne</span>
             </div>
-            <div class="w-10 h-10 flex items-center justify-center border-2 border-black rounded-full">
-                <i class="fa-solid fa-square text-black"></i>
-            </div>
-            <div class="w-10 h-10 flex items-center justify-center border-2 border-red-500 rounded-full">
-                <i class="fa-solid fa-trash text-xl text-red-500"></i>
+            <div class="flex gap-5 ml-auto">
+                <div class="w-10 h-10 flex items-center justify-center border-2 border-orange-500 rounded-full">
+                    <i class="fa-solid fa-delete-left text-orange-500"></i>
+                </div>
+                <div class="w-10 h-10 flex items-center justify-center border-2 border-gray-500 rounded-full archive-btn" data-id="${contact.id}">
+                    <i class="fas fa-archive text-gray-500 text-xl cursor-pointer"></i>
+                </div>
+                <div class="w-10 h-10 flex items-center justify-center border-2 border-black rounded-full">
+                    <i class="fa-solid fa-square text-black"></i>
+                </div>
+                <div class="w-10 h-10 flex items-center justify-center border-2 border-red-500 rounded-full">
+                    <i class="fa-solid fa-trash text-xl text-red-500"></i>
+                </div>
             </div>
         </div>
     `;
-    header.classList.remove("hidden");
-    header.querySelector(".archive-btn").addEventListener("click", () => {
+}
+function initialiserBoutonsDiscussion(contact) {
+    const archiveBtn = document.querySelector(".archive-btn");
+    if (!archiveBtn) return;
+
+    archiveBtn.addEventListener("click", () => {
         showConfirmation(`Archiver ${contact.prenom} ${contact.nom} ?`, (confirmer) => {
             if (confirmer) {
                 contact.archive = true;
                 afficherContact();
-                header.innerHTML = `<p class="text-center w-full text-red-500 font-semibold">Contact archivé</p>`;
-                setTimeout(() => header.classList.add("hidden"), 1500);
+                const discussion = document.getElementById("discussion");
+                discussion.innerHTML = `<p class="text-center w-full text-red-500 font-semibold">Contact archivé</p>`;
+                setTimeout(() => discussion.innerHTML = "", 1500);
             }
         });
     });
 }
+
+
+function genererZoneMessages() {
+    return `
+        <div id="discussion-messages" class="flex flex-col flex-1 overflow-y-auto px-4 py-2 space-y-4"></div>
+    `;
+}
+
+function genererFormulaire() {
+    return `
+        <form id="form-envoi-message" class="w-full flex mb-1 bg-section p-4 gap-2">
+            <input id="message-input" type="text"
+                class="w-full pl-5 pr-12 py-2 rounded-2xl bg-gray-200 text-black focus:outline-none" />
+            <button type="submit" class="w-10 h-10 flex items-center justify-center rounded-full bg-green-500">
+                <i data-lucide="arrow-right" class="text-white cursor-pointer"></i>
+            </button>
+        </form>
+    `;
+}
+const brouillons = {};
+function chargerBrouillon(contactId) {
+    const input = document.getElementById("message-input");
+
+    // Injecter le brouillon si existant
+    input.value = brouillons[contactId] || "";
+
+    // Nettoyer l’ancien écouteur et en assigner un nouveau
+    input.oninput = () => {
+        brouillons[contactId] = input.value;
+    };
+}
+
+
+
+
+function afficherDiscussion(contact) {
+    const discussion = document.getElementById("discussion");
+    discussion.innerHTML = `
+        ${genererHeader(contact)}
+        ${genererZoneMessages()}
+        ${genererFormulaire()}
+    `;
+    chargerBrouillon(contact.id);
+    initialiserBoutonsDiscussion(contact);
+    createIcons({ icons });
+    afficherMessages(contact);
+    EnvoiMessage(contact);
+}
+
+
+function EnvoiMessage(contact) {
+    const form = document.getElementById("form-envoi-message");
+    const input = document.getElementById("message-input");
+
+    if (!form || !input) return;
+
+    form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const texte = input.value.trim();
+        if (!texte) return;
+
+        const nouveauMessage = {
+            type: "envoye",
+            texte: texte,
+            heure: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+
+        contact.messages.push(nouveauMessage);
+        input.value = "";
+        delete brouillons[contact.id];
+        afficherMessages(contact);
+
+    });
+}
+
+
+
+function afficherMessages(contact) {
+    const messageContainer = document.getElementById("discussion-messages");
+    messageContainer.innerHTML = "";
+
+    contact.messages.forEach(msg => {
+        const div = document.createElement("div");
+
+        if (msg.type === 'envoye') {
+            div.className = "bg-[#42CB41] p-2 rounded-lg shadow-xl text-white max-w-xs self-end rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none";
+            div.innerHTML = `
+                <div class="flex justify-between items-end text-[#004600] gap-3">
+                    <p>${msg.texte}</p>
+                    <span class="text-xs text-gray-300 whitespace-nowrap">${msg.heure}</span>
+                    <i data-lucide="check-check" class="w-3 h-3  -ml-2"></i>
+                </div>
+            `;
+        } else {
+            div.className = "flex flex-col shadow-xl justify-between bg-white max-w-xs self-start p-2 rounded-tl-2xl rounded-tr-2xl rounded-br-2xl rounded-bl-none";
+            div.innerHTML = `
+                <div class="flex items-end gap-2">
+                    <p>${msg.texte}</p>
+                    <span class="text-xs text-black">${msg.heure}</span>
+                    <i data-lucide="check" class="w-3 h-3  -ml-1"></i>
+                </div>
+            `;
+        }
+        createIcons({ icons });
+
+        messageContainer.appendChild(div);
+        messageContainer.scrollTop = messageContainer.scrollHeight;
+
+    });
+}
+
+
+
+// afficher discussion
+// function afficherHeaderDiscussion(contact) {
+
+//     const header = document.getElementById("discussion-header");
+//     header.innerHTML = `
+
+//         <div  class="w-10 h-10 flex justify-center items-center  bg-gray-400 rounded-full">
+//             <p class="text-xm font-bold text-white">${contact.avatar}</p>
+//         </div>
+//         <div class="flex flex-col">
+//             <span class="font-bold">${contact.prenom} ${contact.nom}</span>
+//             <span class="text-sm text-green-600">en ligne</span>
+//         </div>
+//         <div class="flex gap-5 ml-auto">
+//             <div class="w-10 h-10 flex items-center justify-center border-2 border-orange-500 rounded-full">
+//                 <i class="fa-solid fa-delete-left text-orange-500"></i>
+//             </div>
+//             <div class="w-10 h-10 flex items-center justify-center border-2 border-gray-500 rounded-full archive-btn" data-id="${contact.id}">
+//                 <i class="fas fa-archive text-gray-500 text-xl cursor-pointer"></i>
+//             </div>
+//             <div class="w-10 h-10 flex items-center justify-center border-2 border-black rounded-full">
+//                 <i class="fa-solid fa-square text-black"></i>
+//             </div>
+//             <div class="w-10 h-10 flex items-center justify-center border-2 border-red-500 rounded-full">
+//                 <i class="fa-solid fa-trash text-xl text-red-500"></i>
+//             </div>
+//         </div>
+//     `;
+//     header.classList.remove("hidden");
+//     header.querySelector(".archive-btn").addEventListener("click", () => {
+//         showConfirmation(`Archiver ${contact.prenom} ${contact.nom} ?`, (confirmer) => {
+//             if (confirmer) {
+//                 contact.archive = true;
+//                 afficherContact();
+//                 header.innerHTML = `<p class="text-center w-full text-red-500 font-semibold">Contact archivé</p>`;
+//                 setTimeout(() => header.classList.add("hidden"), 1500);
+//             }
+//         });
+//     });
+// }
 
 
 // afficher les contact archiver
@@ -191,7 +409,7 @@ function afficherArchives() {
         });
 }
 btnArchives.addEventListener("click", () => {
-        afficherArchives();
+    afficherArchives();
 });
 
 
@@ -314,7 +532,7 @@ function afficherErreurs(erreurs) {
     });
 }
 
-const fermerSidebar = (sidebar,form) => {
+const fermerSidebar = (sidebar, form) => {
     sidebar.classList.add("-translate-x-full");
     form.reset();
 }
@@ -355,7 +573,7 @@ formAjout.addEventListener("submit", (e) => {
     CONTACTS.unshift(nouveauContact);
     afficherContact();
     afficherErreurs({});
-    fermerSidebar(sidebar,formAjout);
+    fermerSidebar(sidebar, formAjout);
 });
 
 
@@ -451,7 +669,7 @@ function creerDivErreur(afterElement, id) {
     return div;
 }
 
-btnCancelGroupe.addEventListener("click", () => fermerSidebar(sidebarAjoutGroupe,formGroup));
+btnCancelGroupe.addEventListener("click", () => fermerSidebar(sidebarAjoutGroupe, formGroup));
 
 
 formGroup.addEventListener("submit", (e) => {
@@ -488,7 +706,7 @@ formGroup.addEventListener("submit", (e) => {
 
     GROUPES.unshift(nouveauGroupe);
     afficherGroupes();
-    fermerSidebar(sidebarAjoutGroupe,formGroup)
+    fermerSidebar(sidebarAjoutGroupe, formGroup)
 });
 
 
