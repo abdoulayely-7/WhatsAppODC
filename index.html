@@ -51,14 +51,18 @@
   class="fixed top-12 left-0 h-[90%] w-[400px] bg-white shadow-lg p-6 z-50 transform -translate-x-full transition-transform duration-300">
   <h2 class="text-xl font-bold mb-4">Créer un Groupe</h2>
   <form id="form-groupe" class="space-y-4">
-    <input type="text" id="groupe-nom" placeholder="Nom du groupe" class="w-full p-2 border border-gray-300 rounded">
+    <input type="text" id="groupe-nom" placeholder="Nom du groupe"
+      class="w-full p-2 border  border-gray-300 rounded focus:outline-none">
+    <div id="erreur-nom-groupe" class="text-red-500 text-sm mt-1"></div>
     <textarea id="groupe-description" placeholder="Description"
-      class="w-full p-2 border border-gray-300 rounded"></textarea>
+      class="w-full p-2 border border-gray-300 rounded focus:outline-none"></textarea>
 
     <div>
       <p class="font-medium text-gray-700 mb-2">Ajouter des membres :</p>
-      <ul id="liste-checkbox-contacts" class="space-y-2 max-h-100 overflow-y-auto border p-2 rounded">
+      <ul id="liste-checkbox-contacts"
+        class="space-y-2 max-h-100 overflow-y-auto border p-2 rounded focus:outline-none">
         <!-- js  -->
+        <div id="erreur-membres-groupe" class="text-red-500 text-sm mt-1"></div>
       </ul>
     </div>
 
@@ -70,10 +74,22 @@
 </div>
 <!-- fin sidiebar groupe -->
 
+<!-- confirmation  archivage -->
+<div id="custom-confirm" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+  <div class="bg-white p-6 rounded-lg shadow-lg w-80 text-center space-y-4">
+    <p id="confirm-text" class="text-lg font-semibold text-gray-800"></p>
+    <div class="flex justify-center gap-4 mt-4">
+      <button id="btn-confirm-yes" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">Oui</button>
+      <button id="btn-confirm-no" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">Non</button>
+    </div>
+  </div>
+</div>
+
+
 
 <body class="bg-body h-screen w-full  flex justify-center items-center overflow-hidden">
   <div id="app" class="h-[90%] w-[90%] p-2 flex shadow-2xl rounded-2xl ">
-    <aside class="bg-aside w-[7%] h-full p-4 flex flex-col  h-full ">
+    <aside class="bg-aside w-[7%] h-full p-4 flex flex-col">
       <div class="flex flex-col  justify-center items-center h-full gap-3">
         <div id="btn-msg"
           class="flex flex-col w-[110px] h-[100] border-2  border-border-aside  hover:bg-border-aside rounded-2xl justify-center items-center cursor-pointer p-4">
