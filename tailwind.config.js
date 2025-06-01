@@ -2,6 +2,8 @@
 export default {
   content: [
     "./index.html",
+    "./public/login.html",
+
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {

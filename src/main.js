@@ -1,8 +1,44 @@
 import './index.css'
-import { CONTACTS } from './const'
-import { GROUPES } from './const'
-
+import { UTILISATEURS } from './const'
 import { createIcons, icons } from 'lucide'
+
+
+
+// Récupère l'ID stocké en localStorage
+// ------------------------------------------------------------------------------------------------------------------------------------------
+
+const userId = parseInt(localStorage.getItem("connectedUserId"));
+let connectedUser = UTILISATEURS.find(u => u.id === userId);
+
+if (!connectedUser) {
+    window.location.href = "/login.html";
+}
+
+
+//  deconnexion
+// ------------------------------------------------------------------------------------------------------------------------------------------
+const btnLogout = document.getElementById("btn-logout");
+
+btnLogout.addEventListener("click", () => {
+    localStorage.removeItem("connectedUserId");
+    window.location.href = "/login.html";
+});
+
+function sauvegarderUtilisateur() {
+    localStorage.setItem("connectedUser", JSON.stringify(connectedUser));
+}
+
+
+const utilisateurEnregistre = localStorage.getItem("connectedUser");
+if (utilisateurEnregistre) {
+    connectedUser = JSON.parse(utilisateurEnregistre);
+} else {
+    connectedUser.contacts = [];
+    connectedUser.groupes = [];
+    localStorage.setItem("connectedUser", JSON.stringify(connectedUser));
+}
+
+
 
 const liste = document.querySelector('#liste-contactes')
 const btnNouveauContact = document.querySelector("#btn-nouveau-contact");
@@ -18,12 +54,16 @@ const sidebarAjoutGroupe = document.getElementById("sidebar-ajout-groupe");
 const btnCancelGroupe = document.getElementById("cancel-groupe");
 const btnArchives = document.querySelector("#btn-archives");
 const btnMessage = document.querySelector("#btn-msg");
+const btnDiffusion = document.querySelector("#diffusion");
 const nameMenu = document.querySelector("#nom-menu")
 let contactActif = null;
+const brouillons = {};
 
 
 
 createIcons({ icons });
+
+
 
 
 btnMessage.addEventListener('click', () => {
@@ -32,12 +72,16 @@ btnMessage.addEventListener('click', () => {
 });
 
 function btnActive(activeBtn) {
-    [btnMessage, btnArchives, btnGroupes].forEach(btn => {
+    [btnMessage, btnArchives, btnGroupes, btnDiffusion].forEach(btn => {
         btn.style.backgroundColor = (btn === activeBtn) ? '#e0b44B' : '';
     });
 }
+
 function contactElement(contact) {
     const li = document.createElement('li');
+    const messages = contact.messages || [];
+    const dernierMessage = messages.length > 0 ? messages[messages.length - 1].texte : ""
+
     li.className = "contact-click flex items-center p-2 rounded-xl gap-3 hover:bg-gray-200 cursor-pointer";
     li.innerHTML = `
         <div  class="w-14 h-14 flex justify-center items-center  bg-gray-400 rounded-full">
@@ -45,7 +89,7 @@ function contactElement(contact) {
         </div>
         <div class="flex mt-1 flex-col flex-1">
             <span class="font-bold">${contact.prenom} ${contact.nom}</span>
-            <span class="font-sm  text-slate-800">${contact.telephone}</span>
+            <span class="font-sm  text-slate-800">${dernierMessage}</span>
         </div>
         <div class="ml-auto">
             <p class="text-xm text-gray-400">${contact.heure}</p>
@@ -60,13 +104,87 @@ function contactElement(contact) {
 }
 
 
+const inputRecherche = document.getElementById("recherche");
+
+inputRecherche.addEventListener("input", () => {
+    const terme = inputRecherche.value.trim().toLowerCase();
+    afficherContactFiltre(terme);
+});
+
+function afficherContactFiltre(recherche) {
+    nameMenu.className = "text-green-500 text-2xl font-bold";
+    nameMenu.textContent = "Discussion";
+    btnActive(btnMessage);
+
+    let contacts = connectedUser.contacts.filter(c => !c.archive);
+
+    if (recherche && recherche !== "*") {
+        contacts = contacts.filter(contact => {
+            const nomComplet = `${contact.prenom} ${contact.nom}`.toLowerCase();
+            const telephone = contact.telephone.toLowerCase();
+            return nomComplet.includes(recherche) || telephone.includes(recherche);
+        });
+    } else if (recherche === "*") {
+        contacts.sort((a, b) => {
+            const nomA = `${a.prenom} ${a.nom}`.toLowerCase();
+            const nomB = `${b.prenom} ${b.nom}`.toLowerCase();
+            return nomA.localeCompare(nomB);
+        });
+    }
+
+    liste.innerHTML = '';
+
+    contacts.forEach(contact => {
+        const li = contactElement(contact);
+        activerContact(li, contact);
+        liste.appendChild(li);
+    });
+}
+
+// diffusion
+document.getElementById("diffusion").addEventListener("click", afficherListeDiffusion);
+function contactDiffusionElement(contact) {
+    const li = document.createElement('li');
+    li.className = "flex items-center p-2 rounded-xl gap-3 hover:bg-gray-200";
+
+    li.innerHTML = `
+        <div class="w-14 h-14 flex justify-center items-center bg-gray-400 rounded-full">
+            <p class="text-xm font-bold text-white">${contact.avatar}</p>
+        </div>
+
+        <div class="flex flex-col flex-1">
+            <span class="font-bold">${contact.prenom} ${contact.nom}</span>
+        </div>
+
+        <div class="ml-auto">
+            <input type="checkbox" class="w-5 h-5 text-green-500 rounded">
+        </div>
+    `;
+
+    return li;
+}
+function afficherListeDiffusion() {
+    nameMenu.className = "text-green-500 text-2xl font-bold";
+    nameMenu.textContent = "Diffusion";
+    btnActive(document.getElementById("diffusion"));
+
+    liste.innerHTML = '';
+
+    connectedUser.contacts
+        .filter(c => !c.archive)
+        .forEach(contact => {
+            const li = contactDiffusionElement(contact);
+            liste.appendChild(li);
+        });
+}
+
 // liste des contact
 function afficherContact() {
     nameMenu.className = "text-green-500 text-2xl font-bold"
     nameMenu.textContent = "Discussion"
     btnActive(btnMessage);
     liste.innerHTML = '';
-    CONTACTS
+    connectedUser.contacts
         .filter(contact => !contact.archive)
         .forEach(contact => {
             const li = contactElement(contact);
@@ -74,6 +192,7 @@ function afficherContact() {
             liste.appendChild(li);
         });
 }
+
 //  affiche la confirmation  de l archivage d un contact
 function showConfirmation(message, callback) {
     const modal = document.getElementById("custom-confirm");
@@ -108,72 +227,10 @@ function activerContact(li, contact) {
         });
         li.classList.add("bg-gray-200");
         contactActif = contact;
-        afficherDiscussion(contact);
+        afficherPageDiscussion(contact);
     });
+    sauvegarderUtilisateur();
 }
-
-// function afficherHeaderDiscussion(contact) {
-//     const discussion = document.getElementById("discussion");
-
-//     discussion.innerHTML = `
-//         <div id="discussion-header"  class="flex gap-3 border-b border-white  p-2">
-//             <div class="w-10 h-10 flex justify-center items-center bg-gray-400 rounded-full">
-//                 <p class="text-xm font-bold text-white">${contact.avatar}</p>
-//             </div>
-//             <div class="flex flex-col">
-//                 <span class="font-bold">${contact.prenom} ${contact.nom}</span>
-//                 <span class="text-sm text-green-600">en ligne</span>
-//             </div>
-//             <div class="flex gap-5 ml-auto">
-//                 <div class="w-10 h-10 flex items-center justify-center border-2 border-orange-500 rounded-full">
-//                     <i class="fa-solid fa-delete-left text-orange-500"></i>
-//                 </div>
-//                 <div class="w-10 h-10 flex items-center justify-center border-2 border-gray-500 rounded-full archive-btn" data-id="${contact.id}">
-//                     <i class="fas fa-archive text-gray-500 text-xl cursor-pointer"></i>
-//                 </div>
-//                 <div class="w-10 h-10 flex items-center justify-center border-2 border-black rounded-full">
-//                     <i class="fa-solid fa-square text-black"></i>
-//                 </div>
-//                 <div class="w-10 h-10 flex items-center justify-center border-2 border-red-500 rounded-full">
-//                     <i class="fa-solid fa-trash text-xl text-red-500"></i>
-//                 </div>
-//             </div>
-//         </div>
-
-//         <div  id="discussion-messages" class=" flex flex-col flex-1 overflow-y-auto px-4 py-2 space-y-4">
-//             // <!-- Les messages seront injectés ici -->
-//         </div>
-
-//         <form id="form-envoi-message" class="w-full flex mb-1 bg-section p-4 gap-2">
-//             <input id="message-input" type="text"
-//                 class="w-full pl-5 pr-12 py-2 rounded-2xl bg-gray-200 text-black focus:outline-none" />
-//             <button type="submit" class="w-10 h-10 flex items-center justify-center rounded-full bg-green-500">
-//                 <i data-lucide="arrow-right" class="text-white cursor-pointer"></i>
-//             </button>
-//         </form>
-
-
-
-//     `;
-
-//     // Gérer le bouton d'archivage
-//     discussion.querySelector(".archive-btn").addEventListener("click", () => {
-//         showConfirmation(`Archiver ${contact.prenom} ${contact.nom} ?`, (confirmer) => {
-//             if (confirmer) {
-//                 contact.archive = true;
-//                 afficherContact();
-//                 discussion.innerHTML = `<p class="text-center w-full text-red-500 font-semibold">Contact archivé</p>`;
-//                 setTimeout(() => discussion.innerHTML = "", 1500);
-//             }
-//         });
-//     });
-
-//     createIcons({ icons });
-
-//     afficherMessages(contact);
-
-//     EnvoiMessage(contact)
-// }
 
 function genererHeader(contact) {
     return `
@@ -219,7 +276,6 @@ function initialiserBoutonsDiscussion(contact) {
     });
 }
 
-
 function genererZoneMessages() {
     return `
         <div id="discussion-messages" class="flex flex-col flex-1 overflow-y-auto px-4 py-2 space-y-4"></div>
@@ -237,38 +293,22 @@ function genererFormulaire() {
         </form>
     `;
 }
-const brouillons = {};
-function chargerBrouillon(contactId) {
-    const input = document.getElementById("message-input");
-
-    // Injecter le brouillon si existant
-    input.value = brouillons[contactId] || "";
-
-    // Nettoyer l’ancien écouteur et en assigner un nouveau
-    input.oninput = () => {
-        brouillons[contactId] = input.value;
-    };
-}
 
 
-
-
-function afficherDiscussion(contact) {
+function afficherPageDiscussion(contact) {
     const discussion = document.getElementById("discussion");
     discussion.innerHTML = `
         ${genererHeader(contact)}
         ${genererZoneMessages()}
         ${genererFormulaire()}
     `;
-    chargerBrouillon(contact.id);
     initialiserBoutonsDiscussion(contact);
     createIcons({ icons });
     afficherMessages(contact);
-    EnvoiMessage(contact);
+    EnvoyerMessage(contact);
 }
 
-
-function EnvoiMessage(contact) {
+function EnvoyerMessage(contact) {
     const form = document.getElementById("form-envoi-message");
     const input = document.getElementById("message-input");
 
@@ -286,14 +326,14 @@ function EnvoiMessage(contact) {
         };
 
         contact.messages.push(nouveauMessage);
+        sauvegarderUtilisateur();
         input.value = "";
         delete brouillons[contact.id];
         afficherMessages(contact);
+        afficherContact()
 
     });
 }
-
-
 
 function afficherMessages(contact) {
     const messageContainer = document.getElementById("discussion-messages");
@@ -324,54 +364,25 @@ function afficherMessages(contact) {
         createIcons({ icons });
 
         messageContainer.appendChild(div);
-        messageContainer.scrollTop = messageContainer.scrollHeight;
+        messageContainer.scrollTop = messageContainer.scrollHeight
+
+        sauvegarderBrouillon(contact)
+        sauvegarderUtilisateur();
+
 
     });
 }
 
+function sauvegarderBrouillon(contact){
+    const input = document.querySelector("#message-input")
+    if (brouillons[contact.id]) {
+        input.value = brouillons[contact.id]
+    }
+    input.addEventListener("input", () =>{
+        brouillons[contact.id] = input.value
+    })
 
-
-// afficher discussion
-// function afficherHeaderDiscussion(contact) {
-
-//     const header = document.getElementById("discussion-header");
-//     header.innerHTML = `
-
-//         <div  class="w-10 h-10 flex justify-center items-center  bg-gray-400 rounded-full">
-//             <p class="text-xm font-bold text-white">${contact.avatar}</p>
-//         </div>
-//         <div class="flex flex-col">
-//             <span class="font-bold">${contact.prenom} ${contact.nom}</span>
-//             <span class="text-sm text-green-600">en ligne</span>
-//         </div>
-//         <div class="flex gap-5 ml-auto">
-//             <div class="w-10 h-10 flex items-center justify-center border-2 border-orange-500 rounded-full">
-//                 <i class="fa-solid fa-delete-left text-orange-500"></i>
-//             </div>
-//             <div class="w-10 h-10 flex items-center justify-center border-2 border-gray-500 rounded-full archive-btn" data-id="${contact.id}">
-//                 <i class="fas fa-archive text-gray-500 text-xl cursor-pointer"></i>
-//             </div>
-//             <div class="w-10 h-10 flex items-center justify-center border-2 border-black rounded-full">
-//                 <i class="fa-solid fa-square text-black"></i>
-//             </div>
-//             <div class="w-10 h-10 flex items-center justify-center border-2 border-red-500 rounded-full">
-//                 <i class="fa-solid fa-trash text-xl text-red-500"></i>
-//             </div>
-//         </div>
-//     `;
-//     header.classList.remove("hidden");
-//     header.querySelector(".archive-btn").addEventListener("click", () => {
-//         showConfirmation(`Archiver ${contact.prenom} ${contact.nom} ?`, (confirmer) => {
-//             if (confirmer) {
-//                 contact.archive = true;
-//                 afficherContact();
-//                 header.innerHTML = `<p class="text-center w-full text-red-500 font-semibold">Contact archivé</p>`;
-//                 setTimeout(() => header.classList.add("hidden"), 1500);
-//             }
-//         });
-//     });
-// }
-
+}
 
 // afficher les contact archiver
 function afficherArchives() {
@@ -379,7 +390,7 @@ function afficherArchives() {
     nameMenu.textContent = "Liste des contacts archivés"
     btnActive(btnArchives);
     liste.innerHTML = '';
-    CONTACTS
+    connectedUser.contacts
         .filter(contact => contact.archive)
         .forEach(contact => {
 
@@ -402,6 +413,7 @@ function afficherArchives() {
 
             li.querySelector("i.fas.fa-rotate-left").addEventListener("click", () => {
                 contact.archive = false;
+                sauvegarderUtilisateur();
                 afficherArchives();
             });
 
@@ -412,27 +424,20 @@ btnArchives.addEventListener("click", () => {
     afficherArchives();
 });
 
-
-
 afficherContact()
 
-// todo 
-function afficherGroupes() {
-    nameMenu.className = "text-green-500 text-2xl font-bold"
-    nameMenu.textContent = "Liste des groupes"
-    btnActive(btnGroupes)
-    liste.innerHTML = '';
+function groupElement(groupe) {
+    const li = document.createElement('li');
+    li.className = "group-click flex gap-3 p-2 rounded-xl hover:bg-gray-200";
 
-    GROUPES.forEach(groupe => {
-        const li = document.createElement('li');
-        li.className = "group-click flex gap-3 p-2 rounded-xl hover:bg-gray-200";
+    // Calcul du nombre de membres
+    const nbMembres = groupe.membres.length;
+    // <span class="font-sm">${groupe.message}</span>
 
-        // Calcul du nombre de membres
-        const nbMembres = groupe.membres.length;
-        // <span class="font-sm">${groupe.message}</span>
-
-        li.innerHTML = `
-            <img src="${groupe.avatar}" alt="discussion" class="w-14 h-14 rounded-full">
+    li.innerHTML = `
+            <div class="w-10 h-10 flex justify-center items-center bg-gray-400 rounded-full">
+                <p class="text-xm font-bold text-white">${groupe.avatar}</p>
+            </div>
             <div class="flex flex-col flex-1">
                 <span class="font-medium">${groupe.nom}</span>
                 <span class="text-sm text-gray-700">${nbMembres} membre${nbMembres > 1 ? 's' : ''} - Admin : Vous</span>
@@ -446,8 +451,171 @@ function afficherGroupes() {
             </div>
         `;
 
-        liste.appendChild(li);
+    return li;
+}
+
+// 
+function activerGroupe(li, groupe) {
+    li.addEventListener("click", () => {
+        document.querySelectorAll(".group-click").forEach(el => {
+            el.classList.remove("bg-gray-200");
+        });
+        li.classList.add("bg-gray-200");
+        afficherGroupDiscussion(groupe);
+        console.log(groupe.nom);
+
     });
+}
+
+function genererGroupHeader(groupe) {
+        const membresTexte = groupe.membres.map(membre => {
+        // Sécurité : si c’est un nombre, convertir vers {id, role}
+        let id, role;
+        if (typeof membre === 'number') {
+            id = membre;
+            role = membre === connectedUser.id ? "admin" : "membre";
+        } else {
+            id = membre.id;
+            role = membre.role;
+        }
+
+        // Si c’est l’utilisateur connecté
+        if (id === connectedUser.id && role === 'admin') {
+            return 'Admin : Vous';
+        } else if (id === connectedUser.id && role !== 'admin') {
+            return 'Membre : Vous';
+        }
+
+        // Sinon, on n’a pas accès aux autres utilisateurs, donc on affiche juste l’ID
+        return `${role === 'admin' ? 'Admin' : 'Membre'} : Utilisateur #${id}`;
+    }).join(', ');
+
+    return `
+        <div id="discussion-header" class="flex gap-3 border-b border-white p-2">
+            <div class="w-10 h-10 flex justify-center items-center bg-gray-400 rounded-full">
+                <p class="text-xm font-bold text-white">${groupe.avatar}</p>
+            </div>
+            <div class="flex flex-col">
+                <span class="font-bold">${groupe.nom}</span>
+                <span class="text-sm text-green-600">${membresTexte}</span>
+            </div>
+            <div class="flex gap-5 ml-auto">
+                <div class="w-10 h-10 flex items-center justify-center border-2 border-orange-500 rounded-full">
+                    <i class="fa-solid fa-delete-left text-orange-500"></i>
+                </div>
+                <div class="w-10 h-10 flex items-center justify-center border-2 border-gray-500 rounded-full archive-btn" data-id="${groupe.id}">
+                    <i class="fas fa-archive text-gray-500 text-xl cursor-pointer"></i>
+                </div>
+                <div class="w-10 h-10 flex items-center justify-center border-2 border-black rounded-full">
+                    <i class="fa-solid fa-square text-black"></i>
+                </div>
+                <div class="w-10 h-10 flex items-center justify-center border-2 border-red-500 rounded-full">
+                    <i class="fa-solid fa-trash text-xl text-red-500"></i>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+
+function afficherGroupDiscussion(groupe) {
+    const discussion = document.getElementById("discussion");
+    discussion.innerHTML = `
+        ${genererGroupHeader(groupe)}
+        ${genererZoneMessages()}
+        ${genererFormulaire()}
+    `;
+    // initialiserBoutonsDiscussion(contact);
+    createIcons({ icons });
+    afficherGroupeMessages(groupe);
+    EnvoiGroupMessage(groupe);
+}
+
+function EnvoiGroupMessage(groupe) {
+    const form = document.getElementById("form-envoi-message");
+    const input = document.getElementById("message-input");
+
+    if (!form || !input) return;
+
+    form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const texte = input.value.trim();
+        if (!texte) return;
+
+        const nouveauMessage = {
+            type: "envoye",
+            texte: texte,
+            heure: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            expediteurId: connectedUser.id
+        };
+
+        groupe.messages.push(nouveauMessage);
+        sauvegarderUtilisateur();
+        input.value = "";
+        delete brouillons[groupe.id];
+        afficherGroupeMessages(groupe);
+
+    });
+}
+
+function afficherGroupeMessages(groupe) {
+    const messageContainer = document.getElementById("discussion-messages");
+    messageContainer.innerHTML = "";
+
+    groupe.messages.forEach(msg => {
+        const div = document.createElement("div");
+
+        if (msg.type === 'envoye') {
+            div.className = "bg-[#42CB41] p-2 rounded-lg shadow-xl text-white max-w-xs self-end rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none";
+            div.innerHTML = `
+                <div class="flex justify-between items-end text-[#004600] gap-3">
+                    <p>${msg.texte}</p>
+                    <span class="text-xs text-gray-300 whitespace-nowrap">${msg.heure}</span>
+                    <i data-lucide="check-check" class="w-3 h-3  -ml-2"></i>
+                </div>
+            `;
+        } else {
+            let nomExpediteur = "Inconnu";
+            if (msg.expediteurId !== undefined) {
+                const expediteur = UTILISATEURS.find(user => user.id === msg.expediteurId);
+                if (expediteur) {
+                    nomExpediteur = expediteur.prenom;
+                }
+            }
+
+            div.className = "flex flex-col shadow-xl justify-between bg-white max-w-xs self-start p-2 rounded-tl-2xl rounded-tr-2xl rounded-br-2xl rounded-bl-none";
+            div.innerHTML = `
+                <p class="border-b w-fit text-sm border-black font-bold">${nomExpediteur}</p>
+                <div class="flex items-end gap-2">
+                    <p>${msg.texte}</p>
+                    <span class="text-xs text-black">${msg.heure}</span>
+                    <i data-lucide="check" class="w-3 h-3  -ml-1"></i>
+                </div>
+            `;
+        }
+
+        messageContainer.appendChild(div);
+
+    });
+    createIcons({ icons });
+    messageContainer.scrollTop = messageContainer.scrollHeight;
+    sauvegarderBrouillon(groupe)
+    sauvegarderUtilisateur();
+}
+
+
+function afficherGroupes() {
+    nameMenu.className = "text-green-500 text-2xl font-bold"
+    nameMenu.textContent = "Liste des groupes"
+    btnActive(btnGroupes)
+    liste.innerHTML = '';
+
+    connectedUser.groupes
+        .forEach(groupe => {
+            const li = groupElement(groupe)
+            activerGroupe(li, groupe)
+            liste.appendChild(li);
+        });
 }
 
 btnGroupes.addEventListener("click", () => {
@@ -455,15 +623,14 @@ btnGroupes.addEventListener("click", () => {
     afficherGroupes();
 });
 
-//FIXME--------------------------------------------------------- ajout de contact----------------------------------------------
-
+// ajout contact
 function genererNomUnique(prenom, nom) {
     let compteur = 1;
     let nomExistant = true;
     let prenomUnique = prenom;
     let nomUnique = nom;
     while (nomExistant) {
-        const existe = CONTACTS.some(c =>
+        const existe = connectedUser.contacts.some(c =>
             c.prenom === prenomUnique && c.nom === nomUnique
         );
         if (existe) {
@@ -489,8 +656,8 @@ function validerContact(nom, prenom, telephone) {
         erreurs.telephone = "Le numéro est obligatoire.";
     } else if (!estNumeroValide(telephone)) {
         erreurs.telephone = "Le numéro ne doit contenir que des chiffres.";
-    } else if (CONTACTS.some(c => c.telephone === telephone)) {
-        erreurs.telephone = "Ce numéro existe déjà.";
+    } else if (connectedUser.contacts.some(c => c.telephone === telephone)) {
+        erreurs.telephone = `Ce numéro existe deja.`;
     }
 
     return erreurs;
@@ -570,7 +737,9 @@ formAjout.addEventListener("submit", (e) => {
         archive: false
     };
 
-    CONTACTS.unshift(nouveauContact);
+    connectedUser.contacts
+        .unshift(nouveauContact);
+    sauvegarderUtilisateur();
     afficherContact();
     afficherErreurs({});
     fermerSidebar(sidebar, formAjout);
@@ -583,8 +752,6 @@ btnNouveauContact.addEventListener("click", () => {
     inputNom.focus()
 });
 
-
-
 btnShowFormGroupe.addEventListener("click", () => {
     sidebarAjoutGroupe.classList.remove("-translate-x-full");
     const inputNom = document.querySelector('#groupe-nom')
@@ -592,26 +759,23 @@ btnShowFormGroupe.addEventListener("click", () => {
     listeContact();
 });
 
-
-
-
-
 function listeContact() {
     const ul = document.getElementById("liste-checkbox-contacts");
     ul.innerHTML = '';
 
-    CONTACTS.forEach(contact => {
-        const li = document.createElement("li");
-        li.className = "flex items-center gap-3";
-        li.innerHTML = `
-            <input type="checkbox" value="${contact.id}" class="form-checkbox w-4 h-4 accent-green-500">
-            <div  class="w-14 h-14 flex justify-center items-center  bg-gray-400 rounded-full">
-                <p class="text-xm font-bold text-white">${contact.avatar}</p>
-            </div>
-            <span class="font-medium">${contact.nom}</span>
-            `;
-        ul.appendChild(li);
-    });
+    connectedUser.contacts
+        .forEach(contact => {
+            const li = document.createElement("li");
+            li.className = "flex items-center gap-3";
+            li.innerHTML = `
+                <input type="checkbox" value="${contact.id}" class="form-checkbox w-4 h-4 accent-green-500">
+                <div  class="w-14 h-14 flex justify-center items-center  bg-gray-400 rounded-full">
+                    <p class="text-xm font-bold text-white">${contact.avatar}</p>
+                </div>
+                <span class="font-medium">${contact.prenom} ${contact.nom}</span>
+                `;
+            ul.appendChild(li);
+        });
 }
 
 function genererNomGroupeUnique(nom) {
@@ -620,7 +784,8 @@ function genererNomGroupeUnique(nom) {
     let existe = true;
 
     while (existe) {
-        existe = GROUPES.some(g => g.nom === nomUnique);
+        existe = connectedUser.groupes
+            .some(g => g.nom === nomUnique);
         if (existe) {
             compteur++;
             nomUnique = `${nom}${compteur}`;
@@ -633,7 +798,7 @@ function genererNomGroupeUnique(nom) {
 function validerGroupe(nom, membres) {
     const erreurs = {};
     if (!nom) erreurs.nom = "Le nom du groupe est obligatoire.";
-    if (membres.length < 2) erreurs.membres = "Sélectionnez au moins 2 membres (hors vous).";
+    if (membres.length < 3) erreurs.membres = "Sélectionnez au moins 2 membres (hors vous).";
     return erreurs;
 }
 
@@ -679,40 +844,43 @@ formGroup.addEventListener("submit", (e) => {
     const description = document.getElementById("groupe-description").value.trim();
     const checkedInputs = document.querySelectorAll("#liste-checkbox-contacts input[type='checkbox']:checked");
 
-    let membres = Array.from(checkedInputs).map(input => parseInt(input.value));
+    let membresIds = Array.from(checkedInputs).map(input => parseInt(input.value));
 
-    if (!membres.includes(utilisateurActif.id)) {
-        membres.unshift(utilisateurActif.id);
+    if (!membresIds.includes(connectedUser.id)) {
+        membresIds.unshift(connectedUser.id);
     }
 
-    const erreurs = validerGroupe(nomSaisi, membres);
+    const erreurs = validerGroupe(nomSaisi, membresIds);
     afficherErreursGroupe(erreurs);
 
     if (Object.keys(erreurs).length > 0) return;
 
     const nomUnique = genererNomGroupeUnique(nomSaisi);
+    const avatar = nomUnique[0]
+    let membres = membresIds.map(id => ({
+            id : id,
+            role : id === connectedUser.id ? "admin" : "membre"
+        })
+    )
+    console.log(membres);
+    
 
     const nouveauGroupe = {
         id: Date.now(),
         nom: nomUnique,
-        description,
+        description: description,
         message: "Nouveau groupe créé",
         messages: [],
         heure: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         nonLus: 0,
-        membres,
-        avatar: "https://i.pravatar.cc/40?u=" + Date.now()
+        membres: membres,
+        avatar: avatar,
+        expediteurId: connectedUser.id
     };
 
-    GROUPES.unshift(nouveauGroupe);
+    connectedUser.groupes
+        .unshift(nouveauGroupe);
+    sauvegarderUtilisateur();
     afficherGroupes();
     fermerSidebar(sidebarAjoutGroupe, formGroup)
 });
-
-
-
-const utilisateurActif = {
-    id: 0, // à adapter selon ton système réel
-    nom: "Admin",
-    prenom: "Moi"
-};

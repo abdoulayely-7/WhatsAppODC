@@ -1,210 +1,190 @@
-import {CONTACTS, GROUPES} from "./const.js";
 
-export function createElement(tag, props = {}, content = "") {
-    const el = document.createElement(tag);
+const liste = document.querySelector('#liste-contactes')
+const btnNouveauContact = document.querySelector("#btn-nouveau-contact");
+const btnFermer = document.querySelector("#btn-fermer");
+const btnAnnuler = document.querySelector("#btn-annuler");
+const sidebar = document.querySelector("#sidebar-ajout");
+const formAjout = document.querySelector("#form-ajout")
+const formGroup = document.querySelector("#form-groupe")
+const btnGroupes = document.querySelector("#btn-groups");
+const showBtnAddGroup = document.querySelector("#show-btn-add-group")
+const btnShowFormGroupe = document.getElementById("show-btn-add-group");
+const sidebarAjoutGroupe = document.getElementById("sidebar-ajout-groupe");
+const btnCancelGroupe = document.getElementById("cancel-groupe");
+const btnArchives = document.querySelector("#btn-archives");
+const btnMessage = document.querySelector("#btn-msg");
+const btnDiffusion = document.querySelector("#diffusion");
+const nameMenu = document.querySelector("#nom-menu")
 
-    const fragment = document.createDocumentFragment();
-    if (typeof tag !== "string") return null;
-    // Gestion de v-if
-    if ('vIf' in props && !props.vIf) return null;
+export function btnActive(activeBtn) {
+    [btnMessage, btnArchives, btnGroupes, btnDiffusion].forEach(btn => {
+        btn.style.backgroundColor = (btn === activeBtn) ? '#e0b44B' : '';
+    });
+}
+export function contactElement(contact) {
+    const li = document.createElement('li');
+    const messages = contact.messages || [];
+    const dernierMessage = messages.length > 0 ? messages[messages.length - 1].texte : ""
 
-    // Gestion de v-for (retourne un fragment)
-    if ('vFor' in props) {
-        const { each, render } = props.vFor;
+    li.className = "contact-click flex items-center p-2 rounded-xl gap-3 hover:bg-gray-200 cursor-pointer";
+    li.innerHTML = `
+        <div  class="w-14 h-14 flex justify-center items-center  bg-gray-400 rounded-full">
+            <p class="text-xm font-bold text-white">${contact.avatar}</p>
+        </div>
+        <div class="flex mt-1 flex-col flex-1">
+            <span class="font-bold">${contact.prenom} ${contact.nom}</span>
+            <span class="font-sm  text-slate-800">${dernierMessage}</span>
+        </div>
+        <div class="ml-auto">
+            <p class="text-xm text-gray-400">${contact.heure}</p>
+            ${contact.nonLus > 0 ? `
+                <span class="bg-green-500 ml-3 text-gray-900 text-[15px] font-bold px-2 py-0.5 rounded-full">
+                    ${contact.nonLus}
+                </span>` : ''}
+        
+        </div>
+    `;
+    return li;
+}
+export function contactDiffusionElement(contact) {
+    const li = document.createElement('li');
+    li.className = "flex items-center p-2 rounded-xl gap-3 hover:bg-gray-200";
 
-        console.log(render)
-        each.forEach((item) => {
-            const child = render(item);
-            if (child instanceof Node) {
-                fragment.appendChild(child);
-            }
-        });
-        // return fragment;
-    }
+    li.innerHTML = `
+        <!-- Avatar -->
+        <div class="w-14 h-14 flex justify-center items-center bg-gray-400 rounded-full">
+            <p class="text-xm font-bold text-white">${contact.avatar}</p>
+        </div>
 
+        <!-- Nom -->
+        <div class="flex flex-col flex-1">
+            <span class="font-bold">${contact.prenom} ${contact.nom}</span>
+        </div>
 
-    for (const key in props) {
-        const value = props[key];
+        <!-- Checkbox -->
+        <div class="ml-auto">
+            <input type="checkbox" class="w-5 h-5 text-green-500 rounded">
+        </div>
+    `;
 
-        // Classes
-        if (key === "class" || key === "className") {
-            el.className = Array.isArray(value) ? value.join(" ") : value;
-        }
-
-        // Événements
-        else if (key.startsWith("on") && typeof value === "function") {
-            const eventName = key.slice(2).toLowerCase();
-            el.addEventListener(eventName, value);
-        }
-
-        // v-show => toggle `display: none`
-        else if (key === "vShow") {
-            el.style.display = value ? "" : "none";
-        }
-
-        // vIf et vFor
-        else if (key === "vIf" || key === "vFor") {
-            continue;
-        }
-
-        // :attr => dynamic binding
-        else if (key.startsWith(":")) {
-            const realAttr = key.slice(1);
-            el.setAttribute(realAttr, value);
-        }
-
-        // style objet
-        else if (key === "style" && typeof value === "object") {
-            Object.assign(el.style, value);
-        }
-
-        // Attribut HTML classique
-        else {
-            el.setAttribute(key, value);
-        }
-    }
-
-    // Contenu : string | Node | array
-    if (Array.isArray(content)) {
-        content.forEach(item => {
-            if (typeof item === "string") {
-                el.appendChild(document.createTextNode(item));
-            } else if (item instanceof Node) {
-                el.appendChild(item);
-            }
-        });
-    } else if (typeof content === "string" || typeof content === "number") {
-        el.textContent = content;
-        // el.appendChild(document.createTextNode(content));
-    } else if (content instanceof Node) {
-        el.appendChild(content);
-    }
-
-    // Méthodes pour chaînage
-    el.addElement = function (tag, props = {}, content = "") {
-        const newEl = createElement(tag, props, content);
-        this.appendChild(newEl);
-        return this;
-    };
-    el.addNode = function (node) {
-        this.appendChild(node);
-        return this;
-    };
-
-    return el.addNode(fragment);
+    return li;
 }
 
+export function afficherArchives() {
+    nameMenu.className = "text-green-500 text-2xl font-bold"
+    nameMenu.textContent = "Liste des contacts archivés"
+    btnActive(btnArchives);
+    liste.innerHTML = '';
+    connectedUser.contacts
+        .filter(contact => contact.archive)
+        .forEach(contact => {
 
-export const sidebar = createElement("div", {
-    id: "sidebar-ajout",
-    class: [
-        "fixed", "top-0", "left-0", "h-full", "w-[400px]", "bg-white", "shadow-lg",
-        "p-6", "z-50", "transform", "-translate-x-full", "transition-transform", "duration-300"
-    ]
-}, [
+            const li = document.createElement('li');
+            li.className = "archived-contact flex gap-3";
 
-    // --- Header ---
-    createElement("div", { class: "flex justify-between items-center mb-4" }, [
-        createElement("h2", { class: "text-xl font-bold" }, "Ajouter un contact"),
-        createElement("button", {
-            id: "btn-fermer",
-            class: "text-gray-500 text-2xl",
-            onclick: () => sidebar.classList.add("-translate-x-full")
-        }, "x")
-    ]),
+            li.innerHTML = `
+            <div  class="w-14 h-14 flex justify-center items-center  bg-gray-400 rounded-full">
+            <p class="text-xm font-bold text-white">${contact.avatar}</p>
+            </div>
+            <div class="flex flex-col flex-1">
+            <span class="font-medium">${contact.prenom} ${contact.nom}</span>
+            <span class="font-sm">${contact.telephone}</span>
+            </div>
+            <div class="ml-auto flex gap-2 items-center">
+            <p class="text-xm text-gray-400">${contact.heure}</p>
+            <i class="fas fa-rotate-left cursor-pointer text-blue-500" title="Désarchiver" data-id="${contact.id}"></i>
+            </div>
+        `;
 
-    // --- Formulaire ---
-    createElement("form", {
-        id: "form-ajout",
-        class: "space-y-4",
-        onsubmit: (e) => {
-            e.preventDefault();
-            console.log("Formulaire soumis !");
-            sidebar.classList.add("-translate-x-full");
+            li.querySelector("i.fas.fa-rotate-left").addEventListener("click", () => {
+                contact.archive = false;
+                sauvegarderUtilisateur();
+                afficherArchives();
+            });
+
+            liste.appendChild(li);
+        });
+}
+btnArchives.addEventListener("click", () => {
+    afficherArchives();
+});
+
+export function genererHeader(contact) {
+    return `
+        <div id="discussion-header" class="flex gap-3 border-b border-white p-2">
+            <div class="w-10 h-10 flex justify-center items-center bg-gray-400 rounded-full">
+                <p class="text-xm font-bold text-white">${contact.avatar}</p>
+            </div>
+            <div class="flex flex-col">
+                <span class="font-bold">${contact.prenom} ${contact.nom}</span>
+                <span class="text-sm text-green-600">en ligne</span>
+            </div>
+            <div class="flex gap-5 ml-auto">
+                <div class="w-10 h-10 flex items-center justify-center border-2 border-orange-500 rounded-full">
+                    <i class="fa-solid fa-delete-left text-orange-500"></i>
+                </div>
+                <div class="w-10 h-10 flex items-center justify-center border-2 border-gray-500 rounded-full archive-btn" data-id="${contact.id}">
+                    <i class="fas fa-archive text-gray-500 text-xl cursor-pointer"></i>
+                </div>
+                <div class="w-10 h-10 flex items-center justify-center border-2 border-black rounded-full">
+                    <i class="fa-solid fa-square text-black"></i>
+                </div>
+                <div class="w-10 h-10 flex items-center justify-center border-2 border-red-500 rounded-full">
+                    <i class="fa-solid fa-trash text-xl text-red-500"></i>
+                </div>
+            </div>
+        </div>
+    `;
+}
+export function genererZoneMessages() {
+    return `
+        <div id="discussion-messages" class="flex flex-col flex-1 overflow-y-auto px-4 py-2 space-y-4"></div>
+    `;
+}
+
+export function afficherMessages(contact) {
+    const messageContainer = document.getElementById("discussion-messages");
+    messageContainer.innerHTML = "";
+
+    contact.messages.forEach(msg => {
+        const div = document.createElement("div");
+
+        if (msg.type === 'envoye') {
+            div.className = "bg-[#42CB41] p-2 rounded-lg shadow-xl text-white max-w-xs self-end rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none";
+            div.innerHTML = `
+                <div class="flex justify-between items-end text-[#004600] gap-3">
+                    <p>${msg.texte}</p>
+                    <span class="text-xs text-gray-300 whitespace-nowrap">${msg.heure}</span>
+                    <i data-lucide="check-check" class="w-3 h-3  -ml-2"></i>
+                </div>
+            `;
+        } else {
+            div.className = "flex flex-col shadow-xl justify-between bg-white max-w-xs self-start p-2 rounded-tl-2xl rounded-tr-2xl rounded-br-2xl rounded-bl-none";
+            div.innerHTML = `
+                <div class="flex items-end gap-2">
+                    <p>${msg.texte}</p>
+                    <span class="text-xs text-black">${msg.heure}</span>
+                    <i data-lucide="check" class="w-3 h-3  -ml-1"></i>
+                </div>
+            `;
         }
-    }, [
+        createIcons({ icons });
 
-        // Champ Nom
-        createElement("div", {}, [
-            createElement("label", { class: "block text-sm font-medium text-gray-700" }, "Nom"),
-            createElement("input", {
-                name: "nom",
-                required: true,
-                type: "text",
-                class: "w-full mt-1 p-2 border border-gray-300 rounded"
-            })
-        ]),
+        messageContainer.appendChild(div);
+        messageContainer.scrollTop = messageContainer.scrollHeight;
 
-        // Champ Avatar
-        createElement("div", {}, [
-            createElement("label", { class: "block text-sm font-medium text-gray-700" }, "Avatar (URL)"),
-            createElement("input", {
-                name: "avatar",
-                placeholder: "https://...",
-                type: "file",
-                class: "w-full mt-1 p-2 border border-gray-300 rounded"
-            })
-        ]),
+    });
+}
 
-        // Champ Message
-        createElement("div", {}, [
-            createElement("label", { class: "block text-sm font-medium text-gray-700" }, "Message"),
-            createElement("input", {
-                name: "message",
-                type: "text",
-                class: "w-full mt-1 p-2 border border-gray-300 rounded"
-            })
-        ]),
+export function genererFormulaire() {
+    return `
+        <form id="form-envoi-message" class="w-full flex mb-1 bg-section p-4 gap-2">
+            <input id="message-input" type="text"
+                class="w-full pl-5 pr-12 py-2 rounded-2xl bg-gray-200 text-black focus:outline-none" />
+            <button type="submit" class="w-10 h-10 flex items-center justify-center rounded-full bg-green-500">
+                <i data-lucide="arrow-right" class="text-white cursor-pointer"></i>
+            </button>
+        </form>
+    `;
+}
 
-        // Boutons
-        createElement("div", { class: "flex justify-end gap-3 mt-6" }, [
-            createElement("button", {
-                type: "button",
-                id: "btn-annuler",
-                class: "text-gray-600 hover:underline",
-                onclick: () => sidebar.classList.add("-translate-x-full")
-            }, "Annuler"),
-            createElement("button", {
-                type: "submit",
-                class: "bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-            }, "Ajouter")
-        ])
-    ])
-]);
-
-// dans le main
-// import { sidebar } from './component.js';
-//
-// document.body.appendChild(sidebar);
-//
-//
-// document.addEventListener("DOMContentLoaded", () => {
-//     const btnNouveau = document.getElementById("btn-nouveau");
-//     if (btnNouveau) {
-//         btnNouveau.addEventListener("click", () => {
-//             sidebar.classList.remove("-translate-x-full");
-//         });
-//     }
-// });
-
-
-// function afficherGroupes() {
-//     liste.innerHTML = '';
-//     GROUPES.forEach(groupe => {
-//         const li = document.createElement('li');
-//         li.className = "p-4 border border-gray-300 rounded-md bg-white";
-//
-//         const membres = groupe.membres.map(id => {
-//             const contact = CONTACTS.find(c => c.id === id);
-//             return contact ? `<li class="text-sm text-gray-600">${contact.nom}</li>` : '';
-//         }).join('');
-//
-//         li.innerHTML = `
-//       <h3 class="text-lg font-bold text-gray-800">${groupe.nom}</h3>
-//       <p class="text-sm text-gray-500 mb-2">${groupe.description}</p>
-//       <ul class="ml-4 list-disc">${membres}</ul>
-//     `;
-//
-//         liste.appendChild(li);
-//     });
-// }
