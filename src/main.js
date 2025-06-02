@@ -1,42 +1,35 @@
 import './index.css'
-import { UTILISATEURS } from './const'
+import { CONTACTS, GROUPES } from './const'
 import { createIcons, icons } from 'lucide'
 
 
-
-// Récupère l'ID stocké en localStorage
-// ------------------------------------------------------------------------------------------------------------------------------------------
-
+// Vérifie la connexion
 const userId = parseInt(localStorage.getItem("connectedUserId"));
-let connectedUser = UTILISATEURS.find(u => u.id === userId);
+let connectedUser = JSON.parse(localStorage.getItem("connectedUser"));
 
-if (!connectedUser) {
+
+// console.log (connectedUser.nom)
+
+if (!userId || !connectedUser) {
     window.location.href = "/login.html";
+    
 }
 
+// Assure que les données sont présentes dans connectedUser
+if (!connectedUser.contacts) connectedUser.contacts = [];
+if (!connectedUser.groupes) connectedUser.groupes = [];
 
-//  deconnexion
-// ------------------------------------------------------------------------------------------------------------------------------------------
 const btnLogout = document.getElementById("btn-logout");
-
 btnLogout.addEventListener("click", () => {
+    sauvegarderUtilisateur();  // on enregistre avant de quitter
     localStorage.removeItem("connectedUserId");
+    localStorage.removeItem("connectedUser");
     window.location.href = "/login.html";
 });
 
-function sauvegarderUtilisateur() {
-    localStorage.setItem("connectedUser", JSON.stringify(connectedUser));
-}
 
 
-const utilisateurEnregistre = localStorage.getItem("connectedUser");
-if (utilisateurEnregistre) {
-    connectedUser = JSON.parse(utilisateurEnregistre);
-} else {
-    connectedUser.contacts = [];
-    connectedUser.groupes = [];
-    localStorage.setItem("connectedUser", JSON.stringify(connectedUser));
-}
+
 
 
 
@@ -57,12 +50,46 @@ const btnMessage = document.querySelector("#btn-msg");
 const btnDiffusion = document.querySelector("#diffusion");
 const nameMenu = document.querySelector("#nom-menu")
 let contactActif = null;
-const brouillons = {};
+let brouillons = JSON.parse(localStorage.getItem("brouillons")) || {};
+
 
 
 
 createIcons({ icons });
 
+function sauvegarderUtilisateur() {
+    // Sauvegarder dans connectedUser (comme avant)
+    localStorage.setItem("connectedUser", JSON.stringify(connectedUser));
+
+    // Mettre à jour la version dans "contacts"
+    const allUsers = JSON.parse(localStorage.getItem("contacts")) || [];
+    const index = allUsers.findIndex(u => u.id === connectedUser.id);
+
+    if (index !== -1) {
+        allUsers[index] = connectedUser;
+    } else {
+        allUsers.push(connectedUser);
+    }
+
+    localStorage.setItem("contacts", JSON.stringify(allUsers));
+}
+
+
+
+function sauvegarderBrouillon(contact) {
+    const input = document.querySelector("#message-input");
+
+    // Recharger la valeur sauvegardée s'il y en a une
+    if (brouillons[contact.id]) {
+        input.value = brouillons[contact.id];
+    }
+
+    // Sauvegarder la nouvelle valeur à chaque frappe
+    input.addEventListener("input", () => {
+        brouillons[contact.id] = input.value;
+        localStorage.setItem("brouillons", JSON.stringify(brouillons));
+    });
+}
 
 
 
@@ -154,6 +181,8 @@ function contactDiffusionElement(contact) {
 
         <div class="flex flex-col flex-1">
             <span class="font-bold">${contact.prenom} ${contact.nom}</span>
+            <span class="font-bold">${contact.telephone} </span>
+
         </div>
 
         <div class="ml-auto">
@@ -304,8 +333,10 @@ function afficherPageDiscussion(contact) {
     `;
     initialiserBoutonsDiscussion(contact);
     createIcons({ icons });
+    sauvegarderBrouillon(contact);
     afficherMessages(contact);
     EnvoyerMessage(contact);
+    sauvegarderUtilisateur()
 }
 
 function EnvoyerMessage(contact) {
@@ -366,23 +397,14 @@ function afficherMessages(contact) {
         messageContainer.appendChild(div);
         messageContainer.scrollTop = messageContainer.scrollHeight
 
-        sauvegarderBrouillon(contact)
+        // sauvegarderBrouillon(contact)
         sauvegarderUtilisateur();
 
 
     });
 }
 
-function sauvegarderBrouillon(contact){
-    const input = document.querySelector("#message-input")
-    if (brouillons[contact.id]) {
-        input.value = brouillons[contact.id]
-    }
-    input.addEventListener("input", () =>{
-        brouillons[contact.id] = input.value
-    })
 
-}
 
 // afficher les contact archiver
 function afficherArchives() {
@@ -462,66 +484,61 @@ function activerGroupe(li, groupe) {
         });
         li.classList.add("bg-gray-200");
         afficherGroupDiscussion(groupe);
-        console.log(groupe.nom);
+        // console.log(groupe.nom);
 
     });
 }
 
-function genererGroupHeader(groupe) {
-        const membresTexte = groupe.membres.map(membre => {
-        // Sécurité : si c’est un nombre, convertir vers {id, role}
-        let id, role;
-        if (typeof membre === 'number') {
-            id = membre;
-            role = membre === connectedUser.id ? "admin" : "membre";
-        } else {
-            id = membre.id;
-            role = membre.role;
-        }
+function genererGroupHeader(groupe, connectedUserId) {
+    const membresNoms = groupe.membres.map(membre => {
+        const utilisateur = connectedUser.contacts.find(u => u.id === membre.id);
+        if (!utilisateur) return '';
 
-        // Si c’est l’utilisateur connecté
-        if (id === connectedUser.id && role === 'admin') {
+        if (membre.id === connectedUserId && membre.role === 'admin') {
             return 'Admin : Vous';
-        } else if (id === connectedUser.id && role !== 'admin') {
-            return 'Membre : Vous';
         }
 
-        // Sinon, on n’a pas accès aux autres utilisateurs, donc on affiche juste l’ID
-        return `${role === 'admin' ? 'Admin' : 'Membre'} : Utilisateur #${id}`;
+        const roleLabel = membre.role === 'admin' ? 'Admin' : 'Membre';
+        return `${roleLabel} : ${utilisateur.prenom} ${utilisateur.nom}`;
     }).join(', ');
 
     return `
-        <div id="discussion-header" class="flex gap-3 border-b border-white p-2">
-            <div class="w-10 h-10 flex justify-center items-center bg-gray-400 rounded-full">
-                <p class="text-xm font-bold text-white">${groupe.avatar}</p>
+        <div id="discussion-header" class="flex flex-col gap-2 border-b border-white p-2">
+            <div class="flex gap-3 items-center">
+                <div class="w-10 h-10 flex justify-center items-center bg-gray-400 rounded-full">
+                    <p class="text-xm font-bold text-white">${groupe.avatar}</p>
+                </div>
+                <div class="flex flex-col">
+                    <span class="font-bold">${groupe.nom}</span>
+                    <span class="text-sm text-green-600">en ligne</span>
+                </div>
+                <div class="flex gap-5 ml-auto">
+                    <div class="w-10 h-10 flex items-center justify-center border-2 border-orange-500 rounded-full">
+                        <i class="fa-solid fa-delete-left text-orange-500"></i>
+                    </div>
+                    <div class="w-10 h-10 flex items-center justify-center border-2 border-gray-500 rounded-full archive-btn" data-id="${groupe.id}">
+                        <i class="fas fa-archive text-gray-500 text-xl cursor-pointer"></i>
+                    </div>
+                    <div class="w-10 h-10 flex items-center justify-center border-2 border-black rounded-full">
+                        <i class="fa-solid fa-square text-black"></i>
+                    </div>
+                    <div class="w-10 h-10 flex items-center justify-center border-2 border-red-500 rounded-full">
+                        <i class="fa-solid fa-trash text-xl text-red-500"></i>
+                    </div>
+                </div>
             </div>
-            <div class="flex flex-col">
-                <span class="font-bold">${groupe.nom}</span>
-                <span class="text-sm text-green-600">${membresTexte}</span>
-            </div>
-            <div class="flex gap-5 ml-auto">
-                <div class="w-10 h-10 flex items-center justify-center border-2 border-orange-500 rounded-full">
-                    <i class="fa-solid fa-delete-left text-orange-500"></i>
-                </div>
-                <div class="w-10 h-10 flex items-center justify-center border-2 border-gray-500 rounded-full archive-btn" data-id="${groupe.id}">
-                    <i class="fas fa-archive text-gray-500 text-xl cursor-pointer"></i>
-                </div>
-                <div class="w-10 h-10 flex items-center justify-center border-2 border-black rounded-full">
-                    <i class="fa-solid fa-square text-black"></i>
-                </div>
-                <div class="w-10 h-10 flex items-center justify-center border-2 border-red-500 rounded-full">
-                    <i class="fa-solid fa-trash text-xl text-red-500"></i>
-                </div>
+            <div class="text-sm text-gray-500 italic pl-12">
+                ${membresNoms}
             </div>
         </div>
     `;
 }
 
-
 function afficherGroupDiscussion(groupe) {
     const discussion = document.getElementById("discussion");
+    const connectedUserId = parseInt(localStorage.getItem("connectedUserId"));
     discussion.innerHTML = `
-        ${genererGroupHeader(groupe)}
+        ${genererGroupHeader(groupe, connectedUserId)}
         ${genererZoneMessages()}
         ${genererFormulaire()}
     `;
@@ -557,6 +574,8 @@ function EnvoiGroupMessage(groupe) {
 
     });
 }
+
+
 
 function afficherGroupeMessages(groupe) {
     const messageContainer = document.getElementById("discussion-messages");
@@ -846,8 +865,8 @@ formGroup.addEventListener("submit", (e) => {
 
     let membresIds = Array.from(checkedInputs).map(input => parseInt(input.value));
 
-    if (!membresIds.includes(connectedUser.id)) {
-        membresIds.unshift(connectedUser.id);
+    if (!membresIds.includes(userId)) {
+        membresIds.unshift(userId);
     }
 
     const erreurs = validerGroupe(nomSaisi, membresIds);
@@ -858,12 +877,12 @@ formGroup.addEventListener("submit", (e) => {
     const nomUnique = genererNomGroupeUnique(nomSaisi);
     const avatar = nomUnique[0]
     let membres = membresIds.map(id => ({
-            id : id,
-            role : id === connectedUser.id ? "admin" : "membre"
-        })
+        id: id,
+        role: id === connectedUser.id ? "admin" : "membre"
+    })
     )
     console.log(membres);
-    
+
 
     const nouveauGroupe = {
         id: Date.now(),
@@ -884,3 +903,5 @@ formGroup.addEventListener("submit", (e) => {
     afficherGroupes();
     fermerSidebar(sidebarAjoutGroupe, formGroup)
 });
+
+
