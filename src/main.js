@@ -12,8 +12,10 @@ let connectedUser = JSON.parse(localStorage.getItem("connectedUser"));
 
 if (!userId || !connectedUser) {
     window.location.href = "/login.html";
+    
 }
 
+// Assure que les données sont présentes dans connectedUser
 if (!connectedUser.contacts) connectedUser.contacts = [];
 if (!connectedUser.groupes) connectedUser.groupes = [];
 
