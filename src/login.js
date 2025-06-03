@@ -1,8 +1,6 @@
 import { CONTACTS } from "./const.js";
 import "./index.css";
 
-// Ton code JS ici...
-
 
 if (!localStorage.getItem("contacts")) {
 
