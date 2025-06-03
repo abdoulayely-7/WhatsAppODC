@@ -9,13 +9,11 @@ let connectedUser = JSON.parse(localStorage.getItem("connectedUser"));
 
 
 // console.log (connectedUser.nom)
-// 
-// if (!userId || !connectedUser) {
-    // window.location.href = "/login.html";
-    // 
-// }
 
-// Assure que les données sont présentes dans connectedUser
+if (!userId || !connectedUser) {
+    window.location.href = "/login.html";
+}
+
 if (!connectedUser.contacts) connectedUser.contacts = [];
 if (!connectedUser.groupes) connectedUser.groupes = [];
 
