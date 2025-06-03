@@ -9,11 +9,11 @@ let connectedUser = JSON.parse(localStorage.getItem("connectedUser"));
 
 
 // console.log (connectedUser.nom)
-
-if (!userId || !connectedUser) {
-    window.location.href = "/login.html";
-    
-}
+// 
+// if (!userId || !connectedUser) {
+    // window.location.href = "/login.html";
+    // 
+// }
 
 // Assure que les données sont présentes dans connectedUser
 if (!connectedUser.contacts) connectedUser.contacts = [];
@@ -21,7 +21,7 @@ if (!connectedUser.groupes) connectedUser.groupes = [];
 
 const btnLogout = document.getElementById("btn-logout");
 btnLogout.addEventListener("click", () => {
-    sauvegarderUtilisateur();  // on enregistre avant de quitter
+    sauvegarderUtilisateur();  
     localStorage.removeItem("connectedUserId");
     localStorage.removeItem("connectedUser");
     window.location.href = "/login.html";

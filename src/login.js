@@ -1,20 +1,7 @@
-// À faire une seule fois pour initialiser
 import { CONTACTS } from "./const.js";
 
-
-
-
-
-// Initialiser CONTACTS dans le localStorage **uniquement s’il n’existe pas déjà**
 if (!localStorage.getItem("contacts")) {
-  // const utilisateurExemple = {
-  //   id: Date.now(),
-  //   nom: "Dupont",
-  //   prenom: "Jean",
-  //   telephone: "99",
-  //   contacts: [],
-  //   groupes: []
-  // };
+
   localStorage.setItem("contacts", JSON.stringify(CONTACTS));
 }
 
