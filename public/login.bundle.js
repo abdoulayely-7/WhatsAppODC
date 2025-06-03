@@ -1,6 +1,6 @@
 // public/login.bundle.js
 
-export const CONTACTS = [
+const CONTACTS = [
     {
 
         id: 1,
@@ -34,7 +34,7 @@ export const CONTACTS = [
 
     },
 ];
-export const GROUPES = [
+const GROUPES = [
     {
         id: 2,
         nom: "Foot",
