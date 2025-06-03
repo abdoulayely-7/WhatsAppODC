@@ -1,4 +1,4 @@
-import { CONTACTS } from "./const.js";
+// import { CONTACTS } from "./const.js";
 import "./index.css";
 
 
